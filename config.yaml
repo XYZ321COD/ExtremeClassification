@@ -1,0 +1,11 @@
+hyperparameters: 
+  lr: [0.01]
+  optimizers: ["Adam"]
+
+options:
+  number_of_trails: 2
+  device: "cpu"
+  epochs: 10
+  batch_size: 128
+  threshold: 0.5
+  num_classes: 10

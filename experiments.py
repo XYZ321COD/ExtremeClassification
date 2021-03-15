@@ -3,6 +3,7 @@ from optuna.trial import TrialState
 from optuna.visualization import plot_optimization_history
 from trainer import objective
 from datetime import datetime
+import matplotlib.pyplot as plt
 import yaml
 
 def experiments():
@@ -29,9 +30,9 @@ def experiments():
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
     optuna.visualization.matplotlib.plot_optimization_history(study)
-    # plt.show()
+    plt.show()
     dataframe = study.trials_dataframe()
-    dataframe.to_csv("output/output-{}.csv".format(datetime.now()))
+    dataframe.to_csv("output-{}.csv".format(datetime.now()))
 
 if __name__ == "__main__":
     experiments()

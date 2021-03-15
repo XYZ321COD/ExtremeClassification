@@ -1,11 +1,12 @@
 hyperparameters: 
-  lr: [0.01]
-  optimizers: ["Adam"]
+  lr: [0.01, 0.0001, 0.001]
+  optimizers: ["Adam", "SGD"]
 
 options:
-  number_of_trails: 2
+  number_of_trails: 4
   device: "cpu"
   epochs: 10
   batch_size: 128
   threshold: 0.5
   num_classes: 10
+  name_of_the_run: "_initial"

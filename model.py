@@ -22,11 +22,11 @@ def define_model():
           ('relu2', nn.ReLU()),
           ('maxpool2', nn.MaxPool2d((2, 2), stride=2)),
           ('flatten', Flatten_()),
-          ('fc1', nn.Linear(400, 10)),
-        #   ('relu3', nn.ReLU()),
-        #   ('fc2', nn.Linear(120, 84)),
-        #   ('relu3', nn.ReLU()),
-        #   ('fc3', nn.Linear(84, 10)),
+          ('fc1', nn.Linear(400, 120)),
+          ('relu3', nn.ReLU()),
+          ('fc2', nn.Linear(120, 84)),
+          ('relu3', nn.ReLU()),
+          ('fc3', nn.Linear(84, 10)),
           ('sigmoid1', nn.Sigmoid())
         ]))
 

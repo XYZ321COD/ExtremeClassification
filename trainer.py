@@ -5,27 +5,30 @@ import torch
 import yaml
 from model import define_model, add_aggregation_to_model
 import sklearn.metrics as mt
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
+file = open(r'config.yaml')
+cfg = yaml.load(file, Loader=yaml.FullLoader)
 
-def objective(trial):
-
-    file = open(r'config.yaml')
-    cfg = yaml.load(file, Loader=yaml.FullLoader)
-
+def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
+    
     DEVICE = torch.device(cfg['options']['device'])
     BATCHSIZE = cfg['options']['batch_size']
     EPOCHS = cfg['options']['epochs']
-    N_TRAIN_EXAMPLES = BATCHSIZE * 120
-    N_VALID_EXAMPLES = BATCHSIZE * 40
+    N_TRAIN_EXAMPLES = BATCHSIZE * 50
+    N_VALID_EXAMPLES = BATCHSIZE * 10
 
     # Generate the model.
     model = define_model().to(DEVICE)
     # Add agregation layer
-    model = add_aggregation_to_model(model, 10, 10)
+    # model = add_aggregation_to_model(model, 10, 10)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])
     lr = trial.suggest_categorical("lr", cfg['hyperparameters']['lr'])
+    
+    WRITTER = SummaryWriter('runs{}/mnist_{}_{}'.format(name_of_the_run, optimizer_name, lr))
 
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
 
@@ -71,6 +74,13 @@ def objective(trial):
         trial.report(accuracy_full, epoch)
         trial.report(f1_score_full, epoch)
         trial.report(loss_full, epoch)
+        for n, p in model.named_parameters():
+            if 'bias' not in n:
+                WRITTER.add_histogram('{}'.format(n), p, epoch)
+            if p.requires_grad:
+                WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
+        WRITTER.add_scalar('BCE Loss',loss_full, epoch+1)
+        WRITTER.add_scalar('Acc', accuracy_full, epoch+1 )
     
     trial.set_user_attr("accuracy", accuracy_full)
     trial.set_user_attr("f1_score", f1_score_full)

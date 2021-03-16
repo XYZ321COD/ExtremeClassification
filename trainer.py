@@ -21,8 +21,10 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     # Generate the model.
     model = define_model().to(DEVICE)
+    
     # Add agregation layer
-    # model = add_aggregation_to_model(model, 10, 10)
+    if cfg['options']['add_reduction_layer']:
+        model = add_aggregation_to_model(model, cfg['options']['reduction_value'], 10)
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])

@@ -10,3 +10,5 @@ options:
   threshold: 0.5
   num_classes: 10
   name_of_the_run: "_initial"
+  add_reduction_layer: False
+  reduction_value: 10

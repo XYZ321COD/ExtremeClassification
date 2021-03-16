@@ -21,7 +21,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     # Generate the model.
     model = define_model().to(DEVICE)
-    
+
     # Add agregation layer
     if cfg['options']['add_reduction_layer']:
         model = add_aggregation_to_model(model, cfg['options']['reduction_value'], 10)
@@ -42,8 +42,9 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         model.train()
         for batch_idx, (data, target) in enumerate(train_loader):
             # Limiting training data for faster epochs.
-            if batch_idx * BATCHSIZE >= N_TRAIN_EXAMPLES:
-                break
+            if cfg['options']['limitate_data']:
+                if batch_idx * BATCHSIZE >= N_TRAIN_EXAMPLES:
+                    break
 
             data, target = data.to(DEVICE), target.to(DEVICE)
             target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
@@ -60,8 +61,9 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(valid_loader):
                 # Limiting validation data.
-                if batch_idx * BATCHSIZE >= N_VALID_EXAMPLES:
-                    break
+                if cfg['options']['limitate_data']:
+                    if batch_idx * BATCHSIZE >= N_VALID_EXAMPLES:
+                        break
                 data, target = data.to(DEVICE), target.to(DEVICE)
                 output = model(data)
                 # Get the index of the max log-probability.
@@ -69,10 +71,14 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
                 loss += nn.BCELoss(reduction='sum')(output, target)
                 accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
                 f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
-
-        accuracy_full = accuracy / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
-        f1_score_full = f1_score / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
-        loss_full = loss / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
+        if cfg['options']['limitate_data']:
+            accuracy_full = accuracy / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
+            f1_score_full = f1_score / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
+            loss_full = loss / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
+        else:
+            accuracy_full = accuracy / len(valid_loader)
+            f1_score_full = f1_score / len(valid_loader)
+            loss_full = loss / len(valid_loader)
         trial.report(accuracy_full, epoch)
         trial.report(f1_score_full, epoch)
         trial.report(loss_full, epoch)

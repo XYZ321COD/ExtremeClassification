@@ -1,14 +1,15 @@
 hyperparameters: 
-  lr: [0.01, 0.0001, 0.001]
+  lr: [0.01, 0.001, 0.0001, 0.00001]
   optimizers: ["Adam", "SGD"]
 
 options:
-  number_of_trails: 4
+  number_of_trails: 12
   device: "cpu"
-  epochs: 10
+  epochs: 4
   batch_size: 128
   threshold: 0.5
   num_classes: 10
   name_of_the_run: "_initial"
   add_reduction_layer: False
   reduction_value: 10
+  limitate_data: False

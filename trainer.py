@@ -28,7 +28,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])
-    lr = trial.suggest_categorical("lr", cfg['hyperparameters']['lr'])
+    lr = trial.suggest_float("lr", min(cfg['hyperparameters']['lr']), max(cfg['hyperparameters']['lr']))
     
     WRITTER = SummaryWriter('runs{}/mnist_{}_{}'.format(name_of_the_run, optimizer_name, lr))
 
@@ -50,7 +50,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
             target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
             optimizer.zero_grad()
             output = model(data)
-            loss = nn.BCELoss(reduction='sum')(output, target)
+            loss = nn.BCELoss(reduction='mean')(output, target)
             loss.backward()
             optimizer.step()
         # Validation of the model.
@@ -67,8 +67,9 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
                 data, target = data.to(DEVICE), target.to(DEVICE)
                 output = model(data)
                 # Get the index of the max log-probability.
+
                 target = nn.functional.one_hot(target, num_classes=cfg['options']['num_classes']).to(dtype=torch.float32)
-                loss += nn.BCELoss(reduction='sum')(output, target)
+                loss += nn.BCELoss(reduction='mean')(output, target)
                 accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
                 f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
         if cfg['options']['limitate_data']:
@@ -81,18 +82,19 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
             loss_full = loss / len(valid_loader)
         trial.report(accuracy_full, epoch)
         trial.report(f1_score_full, epoch)
-        trial.report(loss_full, epoch)
+        trial.report(loss_full.detach(), epoch)
         for n, p in model.named_parameters():
             if 'bias' not in n:
                 WRITTER.add_histogram('{}'.format(n), p, epoch)
             if p.requires_grad:
                 WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
-        WRITTER.add_scalar('BCE Loss',loss_full, epoch+1)
+        WRITTER.add_scalar('BCE Loss',(loss_full.item())/BATCHSIZE, epoch+1)
         WRITTER.add_scalar('Acc', accuracy_full, epoch+1 )
     
     trial.set_user_attr("accuracy", accuracy_full)
     trial.set_user_attr("f1_score", f1_score_full)
-    trial.set_user_attr('bce_loss', loss_full)
+    trial.set_user_attr('bce_loss', loss_full.item()/BATCHSIZE)
+    trial.set_user_attr('epochs', EPOCHS)
 
 
         # Handle pruning based on the intermediate value.

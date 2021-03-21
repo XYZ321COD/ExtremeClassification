@@ -1,9 +1,9 @@
-from utils import get_dataset
+from utils.setup_dataset import get_dataset
+from utils.setup_model import get_model
 import torch.nn as nn
 import torch.optim as optim
 import torch
 import yaml
-from model import define_model, add_aggregation_to_model
 import sklearn.metrics as mt
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
@@ -14,43 +14,28 @@ cfg = yaml.load(file, Loader=yaml.FullLoader)
 def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     
     DEVICE = torch.device(cfg['options']['device'])
-    BATCHSIZE = cfg['options']['batch_size']
     EPOCHS = cfg['options']['epochs']
-    N_TRAIN_EXAMPLES = BATCHSIZE * 50
-    N_VALID_EXAMPLES = BATCHSIZE * 10
 
-    # Generate the model.
-    model = define_model().to(DEVICE)
+    model = get_model(trial=trial).to(DEVICE)
 
-    # Add agregation layer
-    if cfg['options']['add_reduction_layer']:
-        model = add_aggregation_to_model(model, cfg['options']['reduction_value'], 10)
-
-    # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])
     lr = trial.suggest_float("lr", min(cfg['hyperparameters']['lr']), max(cfg['hyperparameters']['lr']))
     
-    WRITTER = SummaryWriter('runs{}/mnist_{}_{}'.format(name_of_the_run, optimizer_name, lr))
+    WRITTER = SummaryWriter('runs{}/run _{}_{}'.format(name_of_the_run, optimizer_name, lr))
 
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
 
-    # Get the MNIST dataset.
-    train_loader, valid_loader = get_dataset.get_mnist()
+    (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
 
     # Training of the model.
     for epoch in range(EPOCHS):
         model.train()
-        for batch_idx, (data, target) in enumerate(train_loader):
-            # Limiting training data for faster epochs.
-            if cfg['options']['limitate_data']:
-                if batch_idx * BATCHSIZE >= N_TRAIN_EXAMPLES:
-                    break
-
+        for (data, target) in train_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
-            target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
+            target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
             optimizer.zero_grad()
             output = model(data)
-            loss = nn.BCELoss(reduction='mean')(output, target)
+            loss = nn.BCELoss(reduction='sum')(output, target)
             loss.backward()
             optimizer.step()
         # Validation of the model.
@@ -59,42 +44,37 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         f1_score = 0
         loss = 0
         with torch.no_grad():
-            for batch_idx, (data, target) in enumerate(valid_loader):
-                # Limiting validation data.
-                if cfg['options']['limitate_data']:
-                    if batch_idx * BATCHSIZE >= N_VALID_EXAMPLES:
-                        break
+            for (data, target) in valid_loader:
                 data, target = data.to(DEVICE), target.to(DEVICE)
                 output = model(data)
-                # Get the index of the max log-probability.
-
-                target = nn.functional.one_hot(target, num_classes=cfg['options']['num_classes']).to(dtype=torch.float32)
-                loss += nn.BCELoss(reduction='mean')(output, target)
+                target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
+                loss += nn.BCELoss(reduction='sum')(output, target)
                 accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
                 f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
-        if cfg['options']['limitate_data']:
-            accuracy_full = accuracy / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
-            f1_score_full = f1_score / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
-            loss_full = loss / min(len(valid_loader.dataset), N_VALID_EXAMPLES / BATCHSIZE)
-        else:
-            accuracy_full = accuracy / len(valid_loader)
-            f1_score_full = f1_score / len(valid_loader)
-            loss_full = loss / len(valid_loader)
-        trial.report(accuracy_full, epoch)
-        trial.report(f1_score_full, epoch)
-        trial.report(loss_full.detach(), epoch)
+        
+        accuracy_full = accuracy / len(valid_loader)
+        f1_score_full = f1_score / len(valid_loader)
+        loss_full = loss / len(valid_loader)
         for n, p in model.named_parameters():
             if 'bias' not in n:
                 WRITTER.add_histogram('{}'.format(n), p, epoch)
-            if p.requires_grad:
-                WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
-        WRITTER.add_scalar('BCE Loss',(loss_full.item())/BATCHSIZE, epoch+1)
-        WRITTER.add_scalar('Acc', accuracy_full, epoch+1 )
+                if p.requires_grad:
+                    WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
+        WRITTER.add_scalar('BCE Loss',(loss_full.item()), epoch+1)
+        WRITTER.add_scalar('Acc', accuracy_full, epoch+1)
+        trial.report(accuracy_full, epoch+1)
+        trial.report(f1_score_full, epoch+1)
+        trial.report(loss_full.detach(), epoch+1)
+        print(f'Accuracy {accuracy_full} in epoch {epoch+1}')
     
+    trial.set_user_attr("model", cfg['options']['model'])
+    trial.set_user_attr("dataset", cfg['dataset']['name'])
+    trial.set_user_attr("batchsize", batch_size)
     trial.set_user_attr("accuracy", accuracy_full)
     trial.set_user_attr("f1_score", f1_score_full)
-    trial.set_user_attr('bce_loss', loss_full.item()/BATCHSIZE)
+    trial.set_user_attr('bce_loss', loss_full.item())
     trial.set_user_attr('epochs', EPOCHS)
+    trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
 
 
         # Handle pruning based on the intermediate value.

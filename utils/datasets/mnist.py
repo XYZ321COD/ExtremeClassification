@@ -5,13 +5,13 @@ from torchvision import datasets
 from torchvision import transforms
 import torch
 
-def get_mnist():
+def get_mnist(batch_size):
 
     opener = urllib.request.build_opener()
     opener.addheaders = [("User-agent", "Mozilla/5.0")]
     urllib.request.install_opener(opener)
 
-    BATCHSIZE = 128
+    BATCHSIZE = batch_size
     DIR = os.getcwd()
 
 

@@ -23,14 +23,14 @@ class Reduction_Layer(torch.nn.Module):
         seq = []
         for i in range(len(x)):
             sub_seq = []
-            for j in range(len(W)):
-                sub_seq.append(W[j, :] * x[i, j])
+            for j in range(W.size()[1]):
+                sub_seq.append(W[:, j] * x[i, j])
 
             seq.append(torch.stack(sub_seq, dim=0).max(dim=1)[0])
 
         out = torch.stack(seq, 0)
         # out = out.max(dim=1)[0]
-
+        # print(x.size(), out.size())
         assert x.size() == out.size()
         return out
         # return (W * x.unsqueeze(1)).max(dim=-1)[0]

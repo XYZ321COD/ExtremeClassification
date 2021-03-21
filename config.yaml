@@ -1,15 +1,15 @@
-hyperparameters: 
-  lr: [0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00001]
+hyperparameters:
+  lr: [0.01, 0.005, 0.001, 0.0005, 0.0001]
   optimizers: ["Adam", "SGD"]
 
 options:
   number_of_trails: 20
   device: "cpu"
-  epochs: 15
+  epochs: 2
   batch_size: 128
   threshold: 0.5
   num_classes: 10
   name_of_the_run: "ReducionLayerMean"
   add_reduction_layer: True
-  reduction_value: 10
+  reduction_value: 4
   limitate_data: False

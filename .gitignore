@@ -1,3 +1,5 @@
 /MNIST
 /output/**
 *.csv
+*.idea*
+*__pycache__*

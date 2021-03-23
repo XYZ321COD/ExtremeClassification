@@ -1,9 +1,12 @@
 import unittest
+
+import ddt
 import torch
 
-from utils.aggregation_layer import aggregate, Reduction_Layer
+from utils.aggregation_layer import aggregate
 
 
+@ddt.ddt
 class AggregationTest(unittest.TestCase):
     """
     Tests which checks if aggregation layer is
@@ -11,28 +14,32 @@ class AggregationTest(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.size_in: int = 5
-        self.size_out: int = 10
         self.batch_size: int = 128
 
-        self.reduction_layer = Reduction_Layer(self.size_in, self.size_out)
-        self.x = torch.rand(self.batch_size, self.size_in, requires_grad=False)
-        self.random_W = torch.rand(self.size_in, self.size_out, requires_grad=False)
-
-    def test_output_size(self) -> None:
+    @ddt.file_data('test_config.yaml')
+    def test_output_size(self, size_in: int, size_out: int) -> None:
         """
         Tests if calculated output size is properly calculated.
         """
-        out = aggregate(self.random_W, self.x)
-        self.assertEqual(out.size(), torch.Size([self.batch_size, self.size_out]))
+        W = torch.rand(size_in, size_out, requires_grad=False)
+        x = torch.rand(self.batch_size, size_in, requires_grad=False)
 
-    def test_aggregation_for_identity(self) -> None:
+        out = aggregate(W, x)
+        self.assertEqual(out.size(), torch.Size([self.batch_size, size_out]))
+
+    @ddt.file_data('test_config.yaml')
+    def test_aggregation_for_identity(self, size_in: int, size_out: int) -> None:
         """
         Tests aggregation for W matrix equal to identity.
         Output should be equal input tensor.
         """
-        out = aggregate(torch.eye(self.size_in), self.x)
-        self.assertTrue(torch.allclose(self.x, out))
+        if size_in != size_out:
+            self.skipTest("Test only if W is identity matrix")
+
+        W = torch.eye(size_in, requires_grad=False)
+        x = torch.rand(self.batch_size, size_out, requires_grad=False)
+        out = aggregate(W, x)
+        self.assertTrue(torch.allclose(x, out))
 
 
 if __name__ == '__main__':

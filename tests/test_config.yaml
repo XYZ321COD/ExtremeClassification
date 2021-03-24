@@ -1,0 +1,47 @@
+sizes_pair_1:
+  size_in: 10
+  size_out: 10
+
+sizes_pair_2:
+  size_in: 5
+  size_out: 5
+
+sizes_pair_3:
+  size_in: 2
+  size_out: 2
+
+sizes_pair_4:
+  size_in: 4
+  size_out: 10
+
+sizes_pair_5:
+  size_in: 2
+  size_out: 25
+
+sizes_pair_6:
+  size_in: 5
+  size_out: 100
+
+sizes_pair_7:
+  size_in: 23
+  size_out: 10
+
+sizes_pair_8:
+  size_in: 10
+  size_out: 21
+
+sizes_pair_9:
+  size_in: 32
+  size_out: 32
+
+sizes_pair_10:
+  size_in: 100
+  size_out: 1000
+
+sizes_pair_11:
+  size_in: 1000
+  size_out: 1000
+
+sizes_pair_12:
+  size_in: 1
+  size_out: 1

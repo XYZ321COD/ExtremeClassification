@@ -11,7 +11,8 @@ def experiments():
     file = open(r'config.yaml')
     cfg = yaml.load(file, Loader=yaml.FullLoader)
 
-    search_space = {"lr": cfg['hyperparameters']['lr'], "optimizer": cfg['hyperparameters']['optimizers']}
+    search_space = {"lr": cfg['hyperparameters']['lr'], "optimizer": cfg['hyperparameters']['optimizers'],
+         "batchsize" : cfg['hyperparameters']['batchsize'], "reduction_value": cfg['hyperparameters']['reduction_value']}
 
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.GridSampler(search_space))
 

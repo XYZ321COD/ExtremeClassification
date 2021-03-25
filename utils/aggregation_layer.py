@@ -25,11 +25,9 @@ class Reduction_Layer(torch.nn.Module):
     def __init__(self, size_in, size_out):
         super().__init__()
         self.size_in, self.size_out = size_in, size_out
-        A = torch.Tensor(size_in, size_out)
+        A = torch.full((size_in, size_out), -1000)
+        A = A.fill_diagonal_(1000).to(torch.float32)
         self.A = torch.nn.Parameter(A)  # nn.Parameter is a Tensor that's a module parameter.
-        # torch.nn.init.eye_(self.A)
-        y = 1.0/np.sqrt(size_in)
-        torch.nn.init.uniform_(self.A, -y, y)
 
     def forward(self, x):
         W = torch.nn.Sigmoid()(self.A)  # Applying sigmoid to weight

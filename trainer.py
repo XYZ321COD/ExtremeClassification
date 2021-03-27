@@ -7,6 +7,7 @@ import yaml
 import sklearn.metrics as mt
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from visual import visualization
 
 file = open(r'config.yaml')
 cfg = yaml.load(file, Loader=yaml.FullLoader)
@@ -16,17 +17,21 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     DEVICE = torch.device(cfg['options']['device'])
     EPOCHS = cfg['options']['epochs']
 
-    model = get_model(trial=trial).to(DEVICE)
+    model, reduction_val = get_model(trial=trial)
+    model.to(DEVICE)
 
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])
     lr = trial.suggest_float("lr", min(cfg['hyperparameters']['lr']), max(cfg['hyperparameters']['lr']))
     
-    WRITTER = SummaryWriter('runs{}/run _{}_{}'.format(name_of_the_run, optimizer_name, lr))
+    WRITTER = SummaryWriter('{}/{}_{}_red_{}'.format(name_of_the_run, optimizer_name, lr, reduction_val))
 
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
 
     (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
-
+    
+    #Get the W to visualize
+    W = list(model.children())[-1].A
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W)
     # Training of the model.
     for epoch in range(EPOCHS):
         model.train()
@@ -75,6 +80,9 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('bce_loss', loss_full.item())
     trial.set_user_attr('epochs', EPOCHS)
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
+
+    # Final visualization
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, W)
 
 
         # Handle pruning based on the intermediate value.

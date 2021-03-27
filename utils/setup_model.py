@@ -15,7 +15,7 @@ def get_model(trial):
     num_of_classes = cfg['dataset']['number_of_classes']
     if cfg['options']['add_reduction_layer']:        
         model = name_to_model[cfg['options']['model']](reduction_value)
-        return add_aggregation_to_model(model, reduction_value, num_of_classes)
+        return add_aggregation_to_model(model, reduction_value, num_of_classes), reduction_value
 
-    return name_to_model[cfg['options']['model']](num_of_classes)
+    return name_to_model[cfg['options']['model']](num_of_classes), reduction_value
 

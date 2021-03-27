@@ -11,6 +11,6 @@ options:
   number_of_trails: 20
   epochs: 2
   device: "cpu"
-  name_of_the_run: "ReducionLayerTestt"
+  name_of_the_run: "ReducionLayerOverAll"
   add_reduction_layer: True
   model: "LaNet"

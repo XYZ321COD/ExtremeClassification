@@ -9,7 +9,7 @@ cfg = yaml.load(file, Loader=yaml.FullLoader)
 
 
 def add_aggregation_to_model(model, input_size, output_size):
-    reduction_layer = MaxReductionLayer if cfg['hyperparameters']['aggregation_method'] else ProdReductionLayer
+    reduction_layer = MaxReductionLayer if cfg['hyperparameters']['aggregation_method'] == 'max' else ProdReductionLayer
     return nn.Sequential(model, reduction_layer(input_size, output_size))
 
 

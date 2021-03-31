@@ -3,6 +3,7 @@ hyperparameters:
   optimizers: ["Adam"]
   batchsize: [128]
   reduction_value: [10, 9, 8, 7, 6, 5, 4, 3, 2]
+  aggregation_method: "max"
 dataset:
   name: "MNIST"
   number_of_classes: 10

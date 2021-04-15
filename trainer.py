@@ -29,12 +29,20 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
     
-    #Get the W to visualize
+    # Get the W to visualize
     W = list(model.children())[-1].A
     visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W)
     # Training of the model.
     for epoch in range(EPOCHS):
-        model.train()
+        # model.train()
+
+        if epoch == 3:
+            model[1].A.data = torch.rand(model[1].A.size(), requires_grad=True)
+            W = model[-1].A.data.clone()
+            visualization(name_of_the_run, optimizer_name, lr, reduction_val, epoch, W)
+            #for param in model[0].parameters():
+            #    param.requires_grad = False
+
         for (data, target) in train_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
             target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
@@ -54,19 +62,23 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
                 output = model(data)
                 target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
                 loss += nn.BCELoss(reduction='sum')(output, target)
-                accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
-                f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
+
+                preds = torch.nn.functional.one_hot(output.argmax(dim=-1).cpu().detach(), num_classes=cfg['dataset']['number_of_classes'])
+                accuracy += mt.accuracy_score(target.cpu().detach(), preds)
+                f1_score += mt.f1_score(target.cpu().detach(), preds, average="samples")
         
         accuracy_full = accuracy / len(valid_loader)
         f1_score_full = f1_score / len(valid_loader)
         loss_full = loss / len(valid_loader)
-        for n, p in model.named_parameters():
-            if 'bias' not in n:
-                WRITTER.add_histogram('{}'.format(n), p, epoch)
-                if p.requires_grad:
-                    WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
-        WRITTER.add_scalar('BCE Loss',(loss_full.item()), epoch+1)
-        WRITTER.add_scalar('Acc', accuracy_full, epoch+1)
+
+        if epoch > 3:
+            for n, p in model.named_parameters():
+                if 'bias' not in n:
+                    WRITTER.add_histogram('{}'.format(n), p, epoch)
+                    if p.requires_grad:
+                        WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
+            WRITTER.add_scalar('BCE Loss',(loss_full.item()), epoch+1)
+            WRITTER.add_scalar('Acc', accuracy_full, epoch+1)
         trial.report(accuracy_full, epoch+1)
         trial.report(f1_score_full, epoch+1)
         trial.report(loss_full.detach(), epoch+1)
@@ -82,7 +94,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
 
     # Final visualization
-    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, W)
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, model[-1].A.data.clone())
 
 
         # Handle pruning based on the intermediate value.

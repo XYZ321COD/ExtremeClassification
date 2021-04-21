@@ -22,3 +22,4 @@ def visualization(name_of_the_run, optimizer, lr, reduction_value, epoch, weight
     if not os.path.exists('output'):
         os.makedirs('output')
     plt.savefig(f"output/{name_of_the_run}_opt{optimizer}_lr{lr}_red{reduction_value}_{epoch}.png")
+    plt.close()

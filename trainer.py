@@ -8,9 +8,11 @@ import sklearn.metrics as mt
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from visual import visualization
+from utils.freeze_layer import *
 
 file = open(r'config.yaml')
 cfg = yaml.load(file, Loader=yaml.FullLoader)
+
 
 def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     
@@ -34,14 +36,18 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W)
     # Training of the model.
     for epoch in range(EPOCHS):
-        # model.train()
+        model.train()
 
-        if epoch == 3:
-            model[1].A.data = torch.rand(model[1].A.size(), requires_grad=True)
-            W = model[-1].A.data.clone()
+        if epoch >= 2:
+            if epoch == 2:
+                model, W = freeze_all_except_first(model, DEVICE, torch.randn)
+            elif epoch % 2 == 0:
+                model, W = freeze_all_except_first(model, DEVICE)
+            elif epoch % 2 != 0:
+                model, W = freeze_first(model, DEVICE)
+
+            # optimizer = getattr(optim, optimizer_name)(filter(lambda pr: pr.requires_grad, model.parameters()), lr=lr)
             visualization(name_of_the_run, optimizer_name, lr, reduction_val, epoch, W)
-            #for param in model[0].parameters():
-            #    param.requires_grad = False
 
         for (data, target) in train_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
@@ -70,15 +76,13 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         accuracy_full = accuracy / len(valid_loader)
         f1_score_full = f1_score / len(valid_loader)
         loss_full = loss / len(valid_loader)
-
-        if epoch > 3:
-            for n, p in model.named_parameters():
-                if 'bias' not in n:
-                    WRITTER.add_histogram('{}'.format(n), p, epoch)
-                    if p.requires_grad:
-                        WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
-            WRITTER.add_scalar('BCE Loss',(loss_full.item()), epoch+1)
-            WRITTER.add_scalar('Acc', accuracy_full, epoch+1)
+        for n, p in model.named_parameters():
+            if 'bias' not in n:
+                WRITTER.add_histogram('{}'.format(n), p, epoch)
+                if p.requires_grad:
+                    WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
+        WRITTER.add_scalar('BCE Loss',(loss_full.item()), epoch+1)
+        WRITTER.add_scalar('Acc', accuracy_full, epoch+1)
         trial.report(accuracy_full, epoch+1)
         trial.report(f1_score_full, epoch+1)
         trial.report(loss_full.detach(), epoch+1)

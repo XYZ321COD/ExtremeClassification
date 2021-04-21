@@ -2,7 +2,7 @@ hyperparameters:
   lr: [0.001]
   optimizers: ["Adam"]
   batchsize: [256]
-  reduction_value: [8,]
+  reduction_value: [10,6,3]
   aggregation_method: "prod"
 dataset:
   name: "MNIST"
@@ -10,8 +10,8 @@ dataset:
 options:
   threshold: 0.5
   number_of_trails: 20
-  epochs: 30
-  device: "cpu"
-  name_of_the_run: "prod_board"
+  epochs: 100
+  device: "cuda"
+  name_of_the_run: "prod_freeze"
   add_reduction_layer: True
   model: "LaNet"

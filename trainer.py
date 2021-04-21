@@ -40,7 +40,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
         if epoch >= 2:
             if epoch == 2:
-                model, W = freeze_all_except_first(model, DEVICE, torch.randn)
+                model, W = freeze_all_except_first(model, DEVICE, torch.rand)
             elif epoch % 2 == 0:
                 model, W = freeze_all_except_first(model, DEVICE)
             elif epoch % 2 != 0:

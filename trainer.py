@@ -38,16 +38,12 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     for epoch in range(EPOCHS):
         model.train()
 
-        if epoch >= 2:
-            if epoch == 2:
-                model, W = freeze_all_except_first(model, DEVICE, torch.rand)
-            elif epoch % 2 == 0:
-                model, W = freeze_all_except_first(model, DEVICE)
-            elif epoch % 2 != 0:
-                model, W = freeze_first(model, DEVICE)
+        if epoch % 4 in (2, 3):
+            model, W = freeze_all_except_first(model, DEVICE)
+        elif epoch % 4 in (0, 1):
+            model, W = freeze_first(model, DEVICE)
 
             # optimizer = getattr(optim, optimizer_name)(filter(lambda pr: pr.requires_grad, model.parameters()), lr=lr)
-            visualization(name_of_the_run, optimizer_name, lr, reduction_val, epoch, W)
 
         for (data, target) in train_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)

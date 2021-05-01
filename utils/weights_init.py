@@ -22,7 +22,7 @@ def init_identity_permutation(size_in: int, size_out: int) -> torch.Tensor:
     return A[torch.randperm(A.size(0)), :]
 
 
-def init_with_ones(size_in: int, size_out: int, *, p: int = 8) -> torch.Tensor:
+def init_with_ones(size_in: int, size_out: int, *, p: int = 4) -> torch.Tensor:
     """
     Initialize matrix `A` in order to get a matrix
     composed of 0 and 1 (on random positions with prob == 1 / p) after sigmoid is applied.
@@ -36,3 +36,4 @@ def init_xavier(size_in: int, size_out: int) -> torch.Tensor:
     A: torch.Tensor = torch.zeros((size_in, size_out))
     torch.nn.init.xavier_uniform_(A)
     return A
+

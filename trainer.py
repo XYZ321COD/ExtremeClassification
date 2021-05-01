@@ -8,9 +8,11 @@ import sklearn.metrics as mt
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from visual import visualization
+from utils.freeze_layer import *
 
 file = open(r'config.yaml')
 cfg = yaml.load(file, Loader=yaml.FullLoader)
+
 
 def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     
@@ -29,12 +31,20 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
     
-    #Get the W to visualize
+    # Get the W to visualize
     W = list(model.children())[-1].A
     visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W)
     # Training of the model.
     for epoch in range(EPOCHS):
         model.train()
+
+        if epoch % 4 in (2, 3):
+            model, W = freeze_all_except_first(model, DEVICE)
+        elif epoch % 4 in (0, 1):
+            model, W = freeze_first(model, DEVICE)
+
+            # optimizer = getattr(optim, optimizer_name)(filter(lambda pr: pr.requires_grad, model.parameters()), lr=lr)
+
         for (data, target) in train_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
             target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
@@ -54,8 +64,10 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
                 output = model(data)
                 target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
                 loss += nn.BCELoss(reduction='sum')(output, target)
-                accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
-                f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
+
+                preds = torch.nn.functional.one_hot(output.argmax(dim=-1).cpu().detach(), num_classes=cfg['dataset']['number_of_classes'])
+                accuracy += mt.accuracy_score(target.cpu().detach(), preds)
+                f1_score += mt.f1_score(target.cpu().detach(), preds, average="samples")
         
         accuracy_full = accuracy / len(valid_loader)
         f1_score_full = f1_score / len(valid_loader)
@@ -82,7 +94,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
 
     # Final visualization
-    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, W)
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, model[-1].A.data.clone())
 
 
         # Handle pruning based on the intermediate value.

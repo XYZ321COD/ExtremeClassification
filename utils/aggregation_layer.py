@@ -1,6 +1,14 @@
+"""
+Initialization of aggregation_layer weights is implemented
+in `utils/weights_init.py.
+If you want to change the initialization simply swap
+the init function used in abstract class constructor.
+"""
+
 import abc
 
 import torch
+from utils.weights_init import *
 
 
 def max_aggregate(W: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
@@ -27,8 +35,8 @@ class ReductionLayer(abc.ABC, torch.nn.Module):
     def __init__(self, size_in: int, size_out: int) -> None:
         super().__init__()
         self.size_in, self.size_out = size_in, size_out
-        A = torch.full((size_in, size_out), -1000)
-        A = A.fill_diagonal_(1000).to(torch.float32)
+        A = init_xavier(size_in, size_out)
+        A.requires_grad = True
         self.A = torch.nn.Parameter(A)
 
 

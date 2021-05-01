@@ -16,7 +16,7 @@ def experiments():
 
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.GridSampler(search_space))
 
-    study.optimize(objective, n_trials=cfg['options']['number_of_trails'], timeout=6000)
+    study.optimize(objective, n_trials=cfg['options']['number_of_trails'], timeout=None)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

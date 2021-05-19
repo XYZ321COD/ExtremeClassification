@@ -8,6 +8,7 @@ import sklearn.metrics as mt
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from visual import visualization
+import torch.nn.utils.prune as prune
 
 file = open(r'config.yaml')
 cfg = yaml.load(file, Loader=yaml.FullLoader)
@@ -22,27 +23,31 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])
     lr = trial.suggest_float("lr", min(cfg['hyperparameters']['lr']), max(cfg['hyperparameters']['lr']))
-    
-    WRITTER = SummaryWriter('{}/{}_{}_red_{}'.format(name_of_the_run, optimizer_name, lr, reduction_val))
+    prunning_value = trial.suggest_float("pr_val", min(cfg['hyperparameters']['prunning_val']), max(cfg['hyperparameters']['prunning_val']))
+    WRITTER = SummaryWriter('{}/{}_{}_red_{}_pr{}'.format(name_of_the_run, optimizer_name, lr, reduction_val, prunning_value))
 
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
 
     (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
     
     #Get the W to visualize
-    W = list(model.children())[-1].A
-    visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W)
+    W = list(model.children())[-2][-1].weight
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W, prunning_value)
     # Training of the model.
     for epoch in range(EPOCHS):
         model.train()
         for (data, target) in train_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
-            target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
+            fake_odd = target % 2
+            target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
+            target = torch.cat((target, fake_odd[:,None]), 1)
             optimizer.zero_grad()
             output = model(data)
             loss = nn.BCELoss(reduction='sum')(output, target)
             loss.backward()
             optimizer.step()
+        if epoch == 5:
+            prune.l1_unstructured(list(model.children())[-2][-1], name='weight', amount=prunning_value)
         # Validation of the model.
         model.eval()
         accuracy = 0
@@ -51,8 +56,10 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         with torch.no_grad():
             for (data, target) in valid_loader:
                 data, target = data.to(DEVICE), target.to(DEVICE)
+                fake_odd = target % 2
                 output = model(data)
-                target = nn.functional.one_hot(target, num_classes=cfg['dataset']['number_of_classes']).to(dtype=torch.float32)
+                target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
+                target = torch.cat((target, fake_odd[:,None]), 1)
                 loss += nn.BCELoss(reduction='sum')(output, target)
                 accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
                 f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
@@ -71,7 +78,6 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         trial.report(f1_score_full, epoch+1)
         trial.report(loss_full.detach(), epoch+1)
         print(f'Accuracy {accuracy_full} in epoch {epoch+1}')
-    
     trial.set_user_attr("model", cfg['options']['model'])
     trial.set_user_attr("dataset", cfg['dataset']['name'])
     trial.set_user_attr("batchsize", batch_size)
@@ -82,7 +88,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
 
     # Final visualization
-    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, W)
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, (list(model.children())[-2][-1].weight), prunning_value)
 
 
         # Handle pruning based on the intermediate value.

@@ -30,6 +30,7 @@ class ReductionLayer(abc.ABC, torch.nn.Module):
         A = torch.full((size_in, size_out), -1000)
         A = A.fill_diagonal_(1000).to(torch.float32)
         self.A = torch.nn.Parameter(A)
+        # self.A = torch.nn.init.uniform_(self.A, -1, 1)
 
 
 class MaxReductionLayer(ReductionLayer):

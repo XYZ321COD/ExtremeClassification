@@ -2,7 +2,10 @@ from utils.models import LaNet
 import yaml
 import torch.nn as nn
 from utils.aggregation_layer import MaxReductionLayer, ProdReductionLayer
-name_to_model = {"LaNet": LaNet.get_LaNet}
+name_to_model = {
+    "LaNet": LaNet.get_LaNet,
+    "CelebA": LaNet.get_CelebA
+}
 
 file = open(r'config.yaml')
 cfg = yaml.load(file, Loader=yaml.FullLoader)

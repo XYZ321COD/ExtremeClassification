@@ -15,7 +15,6 @@ cfg = yaml.load(file, Loader=yaml.FullLoader)
 
 
 def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
-    
     DEVICE = torch.device(cfg['options']['device'])
     EPOCHS = cfg['options']['epochs']
 
@@ -24,39 +23,30 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     optimizer_name = trial.suggest_categorical("optimizer", cfg['hyperparameters']['optimizers'])
     lr = trial.suggest_float("lr", min(cfg['hyperparameters']['lr']), max(cfg['hyperparameters']['lr']))
-    prunning_value = trial.suggest_float("pr_val", min(cfg['hyperparameters']['prunning_val']), max(cfg['hyperparameters']['prunning_val']))
-    WRITTER = SummaryWriter('{}/{}_{}_red_{}_pr{}'.format(name_of_the_run, optimizer_name, lr, reduction_val, prunning_value))
+    prunning_value = trial.suggest_float("pr_val", min(cfg['hyperparameters']['prunning_val']),
+                                         max(cfg['hyperparameters']['prunning_val']))
+    WRITTER = SummaryWriter(
+        '{}/{}_{}_red_{}_pr{}'.format(name_of_the_run, optimizer_name, lr, reduction_val, prunning_value))
 
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
 
     (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
-    
-    #Get the W to visualize
+
+    # Get the W to visualize
     W = list(model.children())[-2][-1].weight
     visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W, prunning_value)
     # Training of the model.
     for epoch in range(EPOCHS):
         model.train()
-
-        if epoch % 4 in (2, 3):
-            model, W = freeze_all_except_first(model, DEVICE)
-        elif epoch % 4 in (0, 1):
-            model, W = freeze_first(model, DEVICE)
-
-            # optimizer = getattr(optim, optimizer_name)(filter(lambda pr: pr.requires_grad, model.parameters()), lr=lr)
-
         for (data, target) in train_loader:
-            data, target = data.to(DEVICE), target.to(DEVICE)
-            fake_odd = target % 2
-            target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
-            target = torch.cat((target, fake_odd[:,None]), 1)
+            data, target = data.to(DEVICE), target.to(DEVICE, dtype=torch.float)
             optimizer.zero_grad()
             output = model(data)
             loss = nn.BCELoss(reduction='sum')(output, target)
             loss.backward()
             optimizer.step()
-        if epoch == 5:
-            prune.l1_unstructured(list(model.children())[-2][-1], name='weight', amount=prunning_value)
+        # if epoch == 5:
+        #     prune.l1_unstructured(list(model.children())[-2][-1], name='weight', amount=prunning_value)
         # Validation of the model.
         model.eval()
         accuracy = 0
@@ -68,13 +58,13 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
                 fake_odd = target % 2
                 output = model(data)
                 target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
-                target = torch.cat((target, fake_odd[:,None]), 1)
+                target = torch.cat((target, fake_odd[:, None]), 1)
                 loss += nn.BCELoss(reduction='sum')(output, target)
+                accuracy += mt.accuracy_score(target.cpu().detach(),
+                                              output.cpu().detach() > cfg['options']['threshold'])
+                f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'],
+                                        average="samples")
 
-                preds = torch.nn.functional.one_hot(output.argmax(dim=-1).cpu().detach(), num_classes=cfg['dataset']['number_of_classes'])
-                accuracy += mt.accuracy_score(target.cpu().detach(), preds)
-                f1_score += mt.f1_score(target.cpu().detach(), preds, average="samples")
-        
         accuracy_full = accuracy / len(valid_loader)
         f1_score_full = f1_score / len(valid_loader)
         loss_full = loss / len(valid_loader)
@@ -83,12 +73,12 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
                 WRITTER.add_histogram('{}'.format(n), p, epoch)
                 if p.requires_grad:
                     WRITTER.add_histogram('{}.grad'.format(n), p.grad, epoch)
-        WRITTER.add_scalar('BCE Loss',(loss_full.item()), epoch+1)
-        WRITTER.add_scalar('Acc', accuracy_full, epoch+1)
-        trial.report(accuracy_full, epoch+1)
-        trial.report(f1_score_full, epoch+1)
-        trial.report(loss_full.detach(), epoch+1)
-        print(f'Accuracy {accuracy_full} in epoch {epoch+1}')
+        WRITTER.add_scalar('BCE Loss', (loss_full.item()), epoch + 1)
+        WRITTER.add_scalar('Acc', accuracy_full, epoch + 1)
+        trial.report(accuracy_full, epoch + 1)
+        trial.report(f1_score_full, epoch + 1)
+        trial.report(loss_full.detach(), epoch + 1)
+        print(f'Accuracy {accuracy_full} in epoch {epoch + 1}')
     trial.set_user_attr("model", cfg['options']['model'])
     trial.set_user_attr("dataset", cfg['dataset']['name'])
     trial.set_user_attr("batchsize", batch_size)
@@ -99,11 +89,11 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
 
     # Final visualization
-    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, (list(model.children())[-2][-1].weight), prunning_value)
+    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, (list(model.children())[-2][-1].weight),
+                  prunning_value)
 
-
-        # Handle pruning based on the intermediate value.
-        # if trial.should_prune():
-        #     raise optuna.exceptions.TrialPruned()
+    # Handle pruning based on the intermediate value.
+    # if trial.should_prune():
+    #     raise optuna.exceptions.TrialPruned()
 
     return accuracy_full

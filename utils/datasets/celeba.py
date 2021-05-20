@@ -55,11 +55,4 @@ def get_celeba(batch_size, *, root_dir=os.getcwd()):
                     collate_fn=collate
                )
 
-    return get_loader("train"), get_loader("valid"), get_loader("test")
-
-
-if __name__ == "__main__":
-    for batch in get_celeba(4)[0]:
-        print(batch)
-        break
-
+    return get_loader("train"), get_loader("valid")

@@ -1,18 +1,18 @@
 hyperparameters:
   lr: [0.001]
   optimizers: ["Adam"]
-  batchsize: [128]
-  reduction_value: [10, 5, 3]
+  batchsize: [32]
+  reduction_value: [10, 7]
   aggregation_method: None
-  prunning_val: [0.5, 0.7, 0.9]
+  prunning_val: [0.5]
 dataset:
-  name: "MNIST"
-  number_of_classes: 11
+  name: "CELEBA"
+  number_of_classes: 10
 options:
   threshold: 0.5
   number_of_trails: 9
-  epochs: 20
+  epochs: 200
   device: "cpu"
   name_of_the_run: "LinearModel_Prunned"
   add_reduction_layer: True
-  model: "LaNet"
+  model: "CelebA"

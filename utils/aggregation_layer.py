@@ -38,6 +38,7 @@ class ReductionLayer(abc.ABC, torch.nn.Module):
         A = init_xavier(size_in, size_out)
         A.requires_grad = True
         self.A = torch.nn.Parameter(A)
+        # self.A = torch.nn.init.uniform_(self.A, -1, 1)
 
 
 class MaxReductionLayer(ReductionLayer):

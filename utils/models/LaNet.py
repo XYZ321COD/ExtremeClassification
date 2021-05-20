@@ -20,7 +20,6 @@ def get_LaNet(reduction_value=10):
           ('fc2', nn.Linear(120, 84)),
           ('relu3', nn.ReLU()),
           ('fc3', nn.Linear(84, reduction_value)),
-          ('sigmoid1', nn.Sigmoid())
         ]))
 
     return LaNet

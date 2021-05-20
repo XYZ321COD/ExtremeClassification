@@ -12,7 +12,8 @@ def experiments():
     cfg = yaml.load(file, Loader=yaml.FullLoader)
 
     search_space = {"lr": cfg['hyperparameters']['lr'], "optimizer": cfg['hyperparameters']['optimizers'],
-         "batchsize" : cfg['hyperparameters']['batchsize'], "reduction_value": cfg['hyperparameters']['reduction_value']}
+         "batchsize" : cfg['hyperparameters']['batchsize'], "reduction_value": cfg['hyperparameters']['reduction_value'],
+         "pr_val": cfg['hyperparameters']['prunning_val']}
 
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.GridSampler(search_space))
 

@@ -9,6 +9,10 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from visual import visualization
 import torch.nn.utils.prune as prune
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.preprocessing import Normalizer
 
 file = open(r'config.yaml')
 cfg = yaml.load(file, Loader=yaml.FullLoader)
@@ -26,10 +30,44 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     prunning_value = trial.suggest_float("pr_val", min(cfg['hyperparameters']['prunning_val']), max(cfg['hyperparameters']['prunning_val']))
     WRITTER = SummaryWriter('{}/{}_{}_red_{}_pr{}'.format(name_of_the_run, optimizer_name, lr, reduction_val, prunning_value))
 
-    optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
+    optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr, weight_decay=0.1)
 
     (train_loader, valid_loader), batch_size = get_dataset(trial=trial)
     
+    colors = ['red', 'green','blue','purple', 'black', 'cyan', 'brown', 'orange','deeppink','gray']
+    markers = ["." ,","]
+    x = []
+    y = []
+    z = []
+    odd = []
+    targets = []
+    model_copy = model[0]
+    model_copy = model_copy[:-1]
+    with torch.no_grad():
+        for (data, target) in valid_loader:
+            data, target = data.to(DEVICE), target.to(DEVICE)
+            output = model_copy(data)
+            for elem_out, elem_targ in zip(output, target):
+                x.append(elem_out[0])
+                y.append(elem_out[1])
+                if reduction_val == 3:
+                    z.append(elem_out[2])
+                odd.append(elem_targ % 2 )
+                targets.append(elem_targ)
+
+    fig = plt.figure(figsize=(8,8))
+    plt.scatter(x, y, c=targets, cmap=matplotlib.colors.ListedColormap(colors))
+    if reduction_val == 3:
+        ax = plt.axes(projection ="3d")
+        sctt = ax.scatter3D(x, y, z, c=targets, cmap=matplotlib.colors.ListedColormap(colors))
+        ax.legend()
+        fig.colorbar(sctt, ax = ax)
+
+
+    # cb = plt.colorbar()
+    loc = np.arange(0,max(targets),max(targets)/float(len(colors)))
+
+    plt.savefig("fig_before{}.svg".format(reduction_val), format="svg")
     #Get the W to visualize
     W = list(model.children())[-2][-1].weight
     visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W, prunning_value)
@@ -46,8 +84,8 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
             loss = nn.BCELoss(reduction='sum')(output, target)
             loss.backward()
             optimizer.step()
-        if epoch == 5:
-            prune.l1_unstructured(list(model.children())[-2][-1], name='weight', amount=prunning_value)
+        # if epoch == 5:
+        #     prune.l1_unstructured(list(model.children())[-2][-1], name='weight', amount=prunning_value)
         # Validation of the model.
         model.eval()
         accuracy = 0
@@ -86,9 +124,44 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('bce_loss', loss_full.item())
     trial.set_user_attr('epochs', EPOCHS)
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
+    colors = ['red', 'green','blue','purple', 'black', 'cyan', 'brown', 'orange','deeppink','gray']
+    markers = ["." ,","]
+    x = []
+    y = []
+    z = []
+    odd = []
+    targets = []
+    model = model[0]
+    model = model[:-1]
+    with torch.no_grad():
+        for (data, target) in valid_loader:
+            data, target = data.to(DEVICE), target.to(DEVICE)
+            output = model(data)
+            for elem_out, elem_targ in zip(output, target):
+                x.append(elem_out[0])
+                y.append(elem_out[1])
+                if reduction_val == 3:
+                    z.append(elem_out[2])
+                odd.append(elem_targ % 2 )
+                targets.append(elem_targ)
 
+    fig = plt.figure(figsize=(8,8))
+    plt.scatter(x, y, c=targets, cmap=matplotlib.colors.ListedColormap(colors))
+    if reduction_val == 3:
+        ax = plt.axes(projection ="3d")
+        sctt = ax.scatter3D(x, y, z, c=targets, cmap=matplotlib.colors.ListedColormap(colors))
+        ax.legend()
+        fig.colorbar(sctt, ax = ax)
+
+
+    cb = plt.colorbar()
+    loc = np.arange(0,max(targets),max(targets)/float(len(colors)))
+    cb.set_ticks(loc)
+    cb.set_ticklabels(colors)
+
+    plt.savefig("fig_after{}.svg".format(reduction_val), format="svg")
     # Final visualization
-    visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, (list(model.children())[-2][-1].weight), prunning_value)
+    # visualization(name_of_the_run, optimizer_name, lr, reduction_val, EPOCHS, (list(model.children())[-2][-1].weight), prunning_value)
 
 
         # Handle pruning based on the intermediate value.

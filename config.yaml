@@ -2,7 +2,7 @@ hyperparameters:
   lr: [0.001]
   optimizers: ["Adam"]
   batchsize: [128]
-  reduction_value: [2]
+  reduction_value: [3]
   aggregation_method: None
   prunning_val: [0.0]
 dataset:
@@ -11,7 +11,7 @@ dataset:
 options:
   threshold: 0.5
   number_of_trails: 2
-  epochs: 30
+  epochs: 5
   device: "cpu"
   name_of_the_run: "LinearModel_Prunned"
   add_reduction_layer: True

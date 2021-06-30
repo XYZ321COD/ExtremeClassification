@@ -124,8 +124,8 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     trial.set_user_attr('bce_loss', loss_full.item())
     trial.set_user_attr('epochs', EPOCHS)
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])
-    colors = ['red', 'green','blue','purple', 'black', 'cyan', 'brown', 'orange','deeppink','gray']
-    markers = ["." ,","]
+    colors = ['black']  # ,'blue','purple', 'black', 'cyan', 'brown', 'orange','deeppink','gray']
+    markers = [".", ","]
     x = []
     y = []
     z = []
@@ -133,17 +133,30 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
     targets = []
     model = model[0]
     model = model[:-1]
+
+    zero_cords = one_cords = None
     with torch.no_grad():
         for (data, target) in valid_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
             output = model(data)
-            for elem_out, elem_targ in zip(output, target):
-                x.append(elem_out[0])
-                y.append(elem_out[1])
-                if reduction_val == 3:
-                    z.append(elem_out[2])
-                odd.append(elem_targ % 2 )
-                targets.append(elem_targ)
+            for i, (elem_out, elem_targ) in enumerate(zip(output, target)):
+                if elem_targ not in (0, 1):
+                    continue
+                if zero_cords is None and elem_targ == 0:
+                    zero_cords = data[i]
+                if one_cords is None and elem_targ == 1:
+                    one_cords = data[i]
+
+    # Kombinacja time
+    with torch.no_grad():
+        for t in np.linspace(0, 1, 100):
+            out = t * zero_cords + (1 - t) * one_cords
+            out = model(out.unsqueeze(0))
+
+            x.append(out[:, 0])
+            y.append(out[:, 1])
+            z.append(out[:, 2])
+            targets.append(2)
 
     fig = plt.figure(figsize=(8,8))
     plt.scatter(x, y, c=targets, cmap=matplotlib.colors.ListedColormap(colors))
@@ -154,10 +167,10 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         fig.colorbar(sctt, ax = ax)
 
 
-    cb = plt.colorbar()
+    # cb = plt.colorbar()
     loc = np.arange(0,max(targets),max(targets)/float(len(colors)))
-    cb.set_ticks(loc)
-    cb.set_ticklabels(colors)
+    # cb.set_ticks(loc)
+    # cb.set_ticklabels(colors)
 
     plt.savefig("fig_after{}.svg".format(reduction_val), format="svg")
     # Final visualization

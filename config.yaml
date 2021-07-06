@@ -2,15 +2,15 @@ hyperparameters:
   lr: [0.001]
   optimizers: ["Adam"]
   batchsize: [128]
-  reduction_value: [10, 5, 3]
+  reduction_value: [3]
   aggregation_method: None
-  prunning_val: [0.5, 0.7, 0.9]
+  prunning_val: [0]
 dataset:
   name: "MNIST"
-  number_of_classes: 11
+  number_of_classes: 10
 options:
   threshold: 0.5
-  number_of_trails: 9
+  number_of_trails: 1
   epochs: 20
   device: "cpu"
   name_of_the_run: "LinearModel_Prunned"

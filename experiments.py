@@ -35,7 +35,7 @@ def experiments():
     print("  Params: ")
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
-    optuna.visualization.matplotlib.plot_optimization_history(study)
+    # optuna.visualization.matplotlib.plot_optimization_history(study)
     plt.show()
     dataframe = study.trials_dataframe()
     dataframe.to_csv("output-{}.csv".format(cfg['options']['name_of_the_run']))

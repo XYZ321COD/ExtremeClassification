@@ -94,3 +94,15 @@ class MCELoss(MaxProbCELoss):
     def __call__(self, output, labels, n_bins=15, logits=True):
         super().loss(output, labels, n_bins, logits)
         return np.max(self.bin_score)
+
+
+class MMC:
+    """
+    Mean Maximum Confidence.
+    """
+
+    def __call__(self, output):
+        return output.max(1).mean()
+
+
+

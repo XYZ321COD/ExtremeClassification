@@ -14,7 +14,8 @@ def add_aggregation_to_model(model, input_size, output_size):
     if reduction_layer is None:
         reduction_layer = nn.Linear(input_size, output_size)
         model = nn.Sequential(model, reduction_layer)
-        model = nn.Sequential(model, nn.Sigmoid())
+        model = nn.Sequential(model, nn.Softmax(dim=1
+                                                q))
         return model
     return nn.Sequential(model, reduction_layer(input_size, output_size))
 
@@ -29,4 +30,4 @@ def get_model(trial):
         model = name_to_model[cfg['options']['model']](reduction_value)
         return add_aggregation_to_model(model, reduction_value, num_of_classes), reduction_value
 
-    return name_to_model[cfg['options']['model']](num_of_classes), reduction_valu
+    return name_to_model[cfg['options']['model']](num_of_classes), reduction_value

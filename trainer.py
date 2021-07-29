@@ -1,6 +1,6 @@
 from utils.setup_dataset import get_train_dataset, get_eval_datasets
 from utils.setup_model import get_model
-from utils.metics import MCELoss, ECELoss
+from utils.metics import MCELoss, ECELoss, MMC
 import torch.nn as nn
 import torch.optim as optim
 import torch
@@ -32,12 +32,13 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     ece_loss = ECELoss()
     mce_loss = MCELoss()
+    mmc_loss = MMC()
 
     (train_loader, valid_loader), batch_size = get_train_dataset(trial=trial)
     eval_dataset, _ = get_eval_datasets(trial)
     # TODO change for bigger number of datasets
-    eval_loader = eval_dataset[0][0]
-    
+    eval_loader = eval_dataset[0][1]
+
     # Get the W to visualize
     # W = list(model.children())[-2][-1].weight
     # visualization(name_of_the_run, optimizer_name, lr, reduction_val, 0, W, prunning_value)
@@ -56,17 +57,18 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
             prune.l1_unstructured(list(model.children())[-2][-1], name='weight', amount=prunning_value)
         # Validation of the model.
         model.eval()
-        accuracy = f1_score = loss = ece = mce = 0
+        accuracy = f1_score = loss = ece = mce = mmc = 0
         with torch.no_grad():
             for (data, target) in valid_loader:
                 data, target = data.to(DEVICE), target.to(DEVICE)
                 output = model(data)
                 target_ = target.detach().clone()
                 target = nn.functional.one_hot(target, num_classes=10).to(dtype=torch.float32)
-                loss += nn.BCELoss(reduction='sum')(output, target)
+                loss += nn.CrossEntropyLoss(reduction='sum')(output, target_)
                 accuracy += mt.accuracy_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'])
                 f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
 
+                mmc += mmc_loss(output.cpu().numpy())
                 ece += ece_loss(output.cpu().numpy(), target_.cpu().numpy())
                 mce += mce_loss(output.cpu().numpy(), target_.cpu().numpy())
 
@@ -75,6 +77,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
         loss_full = loss / len(valid_loader)
         ece_full = ece / len(valid_loader)
         mce_full = mce / len(valid_loader)
+        mmc_full = mmc / len(valid_loader)
 
         for n, p in model.named_parameters():
             if 'bias' not in n:
@@ -93,7 +96,7 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     # Eval on EvalDATASET
     model.eval()
-    accuracy = f1_score = ece = mce = 0
+    accuracy = f1_score = ece = mce = mmc = 0
     with torch.no_grad():
         for (data, target) in eval_loader:
             data, target = data.to(DEVICE), target.to(DEVICE)
@@ -104,11 +107,13 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
             f1_score += mt.f1_score(target.cpu().detach(), output.cpu().detach() > cfg['options']['threshold'], average="samples")
             ece += ece_loss(output.cpu().numpy(), target_.cpu().numpy())
             mce += mce_loss(output.cpu().numpy(), target_.cpu().numpy())
+            mmc += mmc_loss(output.cpu().numpy())
 
     eval_accuracy_full = accuracy / len(eval_loader)
     eval_f1_score_full = f1_score / len(eval_loader)
     eval_ece_full = ece / len(eval_loader)
     eval_mce_full = mce / len(eval_loader)
+    eval_mmc_full = mmc / len(eval_loader)
 
     print(f'Eval accuracy {eval_accuracy_full} | Eval ECE {eval_ece_full} | Eval MCE {eval_mce_full}')
 
@@ -121,10 +126,12 @@ def objective(trial, name_of_the_run=cfg['options']['name_of_the_run']):
 
     trial.set_user_attr("train_MCE", mce_full)
     trial.set_user_attr("train_ECE", ece_full)
+    trial.set_user_attr("train_MMC", mmc_full)
     trial.set_user_attr("eval_accuracy", eval_accuracy_full)
     trial.set_user_attr("eval_f1_score", f1_score_full)
     trial.set_user_attr("eval_MCE", eval_mce_full)
     trial.set_user_attr("eval_ECE", eval_ece_full)
+    trial.set_user_attr("eval_MMC", eval_mmc_full)
 
     trial.set_user_attr('epochs', EPOCHS)
     trial.set_user_attr('reduction_layer', cfg['options']['add_reduction_layer'])

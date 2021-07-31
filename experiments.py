@@ -12,8 +12,7 @@ def experiments():
     cfg = yaml.load(file, Loader=yaml.FullLoader)
 
     search_space = {"lr": cfg['hyperparameters']['lr'], "optimizer": cfg['hyperparameters']['optimizers'],
-         "batchsize" : cfg['hyperparameters']['batchsize'], "reduction_value": cfg['hyperparameters']['reduction_value'],
-         "pr_val": cfg['hyperparameters']['prunning_val']}
+         "batchsize" : cfg['hyperparameters']['batchsize'], "reduction_value": cfg['hyperparameters']['reduction_value']}
 
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.GridSampler(search_space))
 
@@ -38,6 +37,7 @@ def experiments():
     optuna.visualization.matplotlib.plot_optimization_history(study)
     plt.show()
     dataframe = study.trials_dataframe()
+    dataframe = dataframe .sort_values(by=["params_reduction_value"], ascending=False)
     dataframe.to_csv("output-{}.csv".format(cfg['options']['name_of_the_run']))
 
 if __name__ == "__main__":

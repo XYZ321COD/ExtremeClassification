@@ -7,6 +7,7 @@ class Flatten_(nn.Module):
         return x.view(batch_size, -1)
 
 def get_LaNet(reduction_value=10):
+
     LaNet = nn.Sequential(OrderedDict([
           ('conv1', nn.Conv2d(1, 6 , 5, padding=2)),
           ('relu1', nn.ReLU()),
@@ -23,3 +24,4 @@ def get_LaNet(reduction_value=10):
         ]))
 
     return LaNet
+

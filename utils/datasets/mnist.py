@@ -15,19 +15,22 @@ def get_mnist(batch_size):
     DIR = os.getcwd()
 
 
-    transform = transforms.Compose([
-                                    transforms.ToTensor(), 
-                                    transforms.Normalize(
-                                    (0.1307,), (0.3081,))])
-
+    transform_train = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307), (0.3081))
+])
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307), (0.3081))
+])
     # Load MNIST dataset.
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(DIR, train=True, download=True, transform=transform),
+        datasets.MNIST(DIR, train=True, download=True, transform=transform_train),
         batch_size=BATCHSIZE,
         shuffle=True,
     )
     valid_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(DIR, train=False, transform=transform),
+        datasets.MNIST(DIR, train=False, transform=transform_test),
         batch_size=BATCHSIZE,
         shuffle=True,
     )

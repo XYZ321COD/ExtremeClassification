@@ -41,7 +41,7 @@ if __name__ == '__main__':
                 y.append(elem_out[1].cpu())
                 z.append(elem_out[2].cpu())
                 targets.append(elem_targ.cpu())
-
+    
     fig = plt.figure(figsize=(8,8))
     ax = plt.axes(projection ="3d")
     sctt = ax.scatter3D(x, y, z, c=targets, cmap=matplotlib.colors.ListedColormap(colors))

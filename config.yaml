@@ -6,13 +6,13 @@ hyperparameters:
   aggregation_method: None
   prunning_val: [0]
 dataset:
-  name: "CIFAR10"
-  num_classes: 10
+  name: "CIFAR100_K_CLASSES"
+  num_classes: 80
 options:
   number_of_trails: 10
-  epochs: 50
+  epochs: 200
   device: "cuda"
-  name_of_the_run: "Testing"
+  name_of_the_run: "Cifar100"
   add_reduction_layer: True
   model: "CIFAR10"
   loss_function: "CrossEntropyLoss"

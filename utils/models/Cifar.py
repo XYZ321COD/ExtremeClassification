@@ -36,12 +36,12 @@ def get_cifar(reduction_value=10):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             Flatten_(),
-            nn.Dropout(p=0.1),
+            nn.Dropout(p=0.5),
             nn.Linear(4096, 1024),
             nn.ReLU(inplace=True),
             nn.Linear(1024, 512),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1),
+            nn.Dropout(p=0.5),
             nn.Linear(512, reduction_value)
         )
     return BigCifar

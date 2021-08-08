@@ -1,1 +1,1 @@
-model_path: 'model_CIFAR10_CrossEntropyLoss_biasFalse_0.85'
+model_path: 'model_CIFAR10_BCELoss_biasFalse_'
